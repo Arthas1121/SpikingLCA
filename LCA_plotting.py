@@ -1,8 +1,8 @@
 import numpy as np
-import neurovivo.plotting.plotting as plt
 import matplotlib.pyplot as pyl
 import matplotlib.cm as cm
 import LCA.LCA_common as cmn
+from LCA.LCA_analysis import dict_set_at_idx
 
 def plot_edge(SMs, i):
     figure()
@@ -73,3 +73,61 @@ def visualize_vector_comparison(vec, vec_comp=[], normalize=True, position="hori
             pyl.imshow([vec_comp for i in xrange(len(vec))], interpolation="nearest", cmap = cm.Greys_r, vmin=vmin, vmax=vmax)
         else:
             pyl.imshow([vec_comp for i in xrange(len(vec))], interpolation="nearest", cmap = cm.Greys_r)
+
+#######################################################
+######### PetaVision related plotting #################
+#######################################################
+
+
+def plot_dict_set(d, x, y, cmap=cm.Greys, interpolation="nearest"):
+    """
+    Plots the set of dictionary elements. d is the set of dictionary elements 
+    in PetaVision coordinate system (x - columns, y - rows).
+    """
+    assert x*y > len(d)
+    for i in xrange(len(d)):
+        pyl.subplot(x,y,i+1)
+        pyl.imshow(d[i].T, cmap=cmap, interpolation=interpolation)
+        pyl.axis('off')
+        
+def plot_dict_evolution(dict_data, idxs=[], shape=None, outputdir="./", base_file_name="images", image_format="png", create_movie=True):
+    """
+    Creates and saves the visualizations of the dictionaries. Optionally creates a movie as well.
+    
+    dict_data: The dictionaries as loaded from the .pvp file into python.
+    idxs: A list of indexes of those dictionaries to be plotted. If empty plot them all.
+    shape: The shape of the image - a tuple of 2 elements.
+    NOTE: Currently only supports reconstruction of one postsynaptic feature!
+
+    NOTE: more on the movie creation: https://trac.ffmpeg.org/wiki/x264EncodingGuide
+    NOTE: more on displaying the movie in iPython Notebook: 
+    http://nbviewer.ipython.org/github/jrjohansson/scientific-python-lectures/blob/master/Lecture-4-Matplotlib.ipynb
+    """
+    
+    assert np.max(idxs) <= len(dict_data)
+    
+    if create_movie:
+        assert image_format=="png", "Image format must be png if you want to create the movie."
+    
+    if not shape:
+        nr_of_dicts = len(dict_set_at_idx(dict_data, idxs[0]))
+        shape = (np.ceil(np.sqrt(nr_of_dicts)),)*2
+        
+    assert shape[0]*shape[1] >= len(dict_set_at_idx(dict_data, idxs[0]))
+    
+    ### Plotting the images ###
+    for j, idx in enumerate(idxs):
+        the_dict = dict_set_at_idx(dict_data, idx)
+        fig = pyl.figure(figsize=(shape[0]*10/6,)*2)
+        plot_dict_set(the_dict, shape[0], shape[1])
+        pyl.savefig("{0}/{1}-{2}.{3}".format(outputdir, base_file_name, j+1, image_format))
+        pyl.close(fig)
+    
+    ### Movie from images ###
+    if create_movie:
+        from subprocess import call
+        
+        call(["ffmpeg", "-r", "2",\
+        "-i", "{folder}/{fn}-%d.png".format(fn=base_file_name, folder=outputdir),\
+        "-c:v", "libx264", "-r", "30",  "-pix_fmt", "yuv420p", "-s", "480x480",\
+        "{folder}/movie.mp4".format(folder=outputdir)])

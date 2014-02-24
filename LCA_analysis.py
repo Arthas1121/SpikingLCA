@@ -92,3 +92,74 @@ def reconstruction_evaluation(a_LCA, GM, pars):
             }
     return result
 
+##########################################
+##### PetaVision related analysis ########
+##########################################
+
+def dict_set_at_idx(data, idx):
+    """
+    NOTE: Currently only supports reconstruction of one postsynaptic feature!
+    data: The dictionaries as loaded from the .pvp file into python.
+    idx: The time index to be extracted.
+    
+    Returns the np.array of dictionaries in the shape (nf, nxp, nyp).
+    """
+    shape = data[idx][0][1][0][0].shape
+    final_dict_set = np.rollaxis(data[idx][0][1][0][0].reshape(shape[0],shape[1],shape[3]),2)
+    return final_dict_set
+
+
+def sparse_to_full(sparse_data, shape):
+    """
+    Takes the 2D array sparse_data, where the first column are the indices of the nonzero 
+    matrix values and the 2nd column are the values. The indices are increasing in the 
+    PetaVision order (nf, nx, ny - in the order of fastest changing to the slowets changing).
+    
+    It returns the 3D array in the PV standard of (nf, ny, nx), where the dim. values are specified
+    by the argument shape = (nf, nx, ny).  Careful with the order!
+    """
+    
+    assert len(shape) == 3, "Shape should have the form (nf, nx, ny)"
+    
+    dim = shape[0]*shape[1]*shape[2]
+    assert int(np.max(sparse_data.T[0])) < dim
+    
+    ### replace the non-existing values with zeroes
+    vector = np.zeros(dim)
+    for i in xrange(len(sparse_data)):
+        vector[int(sparse_data[i][0])] = sparse_data[i][1]
+
+    ### return the reshaped 3D vector which dimensions are (nf, nx, ny)
+    return np.rollaxis(vector.reshape(shape[2], shape[1], shape[0]), 2)
+
+
+def reconstruct_image(activities, dictionary, nxscale=1., nyscale=1.):
+    """
+    NOTE: Currently only supports reconstruction of one postsynaptic feature!
+    
+    Given the activities and a dictionary (in the PV standard format - (nf, ny, nx)) it reconstructs the
+    original image.
+    """
+    
+    assert len(activities) == len(dictionary)
+    
+    nf, nxp, nyp = dictionary.shape
+    nf, nx, ny = activities.shape
+    
+    # calculate the extended postsynaptic surface based on the presynaptic scales, dimensions and postsynaptic patch size.
+    base_x = int(nxp + 1.*(nx-1)/nxscale)
+    base_y = int(nyp + 1.*(ny-1)/nyscale)
+    
+    reconstruction = np.zeros((base_x, base_y))
+    ### Loop over all dictionaries and their corresponding nodes.
+    for f in xrange(nf):
+        dic = dictionary[f]
+        act = activities[f]
+        for i in xrange(nx):
+            for j in xrange(ny):
+                if act[i,j]:
+                    reconstruction[int(j/nyscale):int(j/nyscale)+nyp,int(i/nxscale):int(i/nxscale)+nxp] += act[i,j]*dic
+    padx = int(nxp/2. - 1./(2*nxscale))
+    pady = int(nyp/2. - 1./(2*nyscale))
+
+    return reconstruction[pady:-pady, padx:-padx]
