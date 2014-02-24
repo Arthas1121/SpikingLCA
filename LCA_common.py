@@ -6,6 +6,38 @@ import os
 HOME = os.environ["HOME"]
 
 # -----------------------------------------------------------------------------
+class Bunch(object):
+# -----------------------------------------------------------------------------
+    '''
+    A helper class. Making a dictionary adict into an object. Once the object
+    is created, each dictonary element can be accessed by object.element .
+    '''
+    def __init__(self, adict):
+        self.__dict__.update(adict)
+
+# -----------------------------------------------------------------------------
+def mkdir_p(path):
+# -----------------------------------------------------------------------------
+    '''
+    Creates a folder or not if there is a folder already. sth like mkdir -p
+    '''
+    if not ('@' in path and ":" in path):
+        try:
+            os.makedirs(path)
+        except OSError, e:
+            if e.errno != 17:
+                raise
+    else:
+        user_name=path.split("@")[0]
+        file_name=path.split(":")[1]
+        server_name=path.split("@")[1].split(":")[0]
+        try:
+            os.system("ssh {0}@{1} mkdir -p {2}".format(user_name, server_name, file_name))
+        except OSError, e:
+            if e.errno != 17:
+                raise
+
+# -----------------------------------------------------------------------------
 def load_pickle(PATH):
 # -----------------------------------------------------------------------------
     """ Loads the pickled data. """
