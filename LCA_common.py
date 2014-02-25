@@ -6,6 +6,19 @@ import os
 HOME = os.environ["HOME"]
 
 # -----------------------------------------------------------------------------
+def rm_rf(path):
+# -----------------------------------------------------------------------------
+    '''
+    tries to remove the path (does rm -rf - like command) and does not complain
+    if the path does not exist or any other exception occurs. Unsafe deleting!
+    '''
+    import shutil
+    try:
+        shutil.rmtree(path)
+    except:
+        pass
+
+# -----------------------------------------------------------------------------
 class Bunch(object):
 # -----------------------------------------------------------------------------
     '''
