@@ -101,35 +101,39 @@ def plot_dict(dict, nfp_idx=0, nf_idxs=[], cmap=cm.Greys, interpolation="nearest
         pyl.axis('off')
 
 
-def plot_dict_evolution(dict_data, idxs=[], shape=None, outputdir="./", base_file_name="images", image_format="png", create_movie=True):
+def plot_dict_evolution(dict_data, nfp_idx=0, t_idxs=[], shape=None, outputdir="./", base_file_name="images", image_format="png", create_movie=True):
     """
-    Creates and saves the visualizations of the dictionaries. Optionally creates a movie as well.
+    Creates and saves the visualizations of the dictionaries. 
+    Optionally creates a movie as well.
     
     dict_data: The dictionaries as loaded from the .pvp file into python.
-    idxs: A list of indexes of those dictionaries to be plotted. If empty plot them all.
-    shape: The shape of the image - a tuple of 2 elements.
-    NOTE: Currently only supports reconstruction of one postsynaptic feature!
-
+    nfp_idx:   The index of the postsynaptic feature to be plotted.
+    t_dxs:     A list of time indexes of those dictionaries to be plotted. 
+               If empty plot them all.
+    shape:     The shape of the image - a tuple of 2 elements.
+    
     NOTE: more on the movie creation: https://trac.ffmpeg.org/wiki/x264EncodingGuide
     NOTE: more on displaying the movie in iPython Notebook: 
     http://nbviewer.ipython.org/github/jrjohansson/scientific-python-lectures/blob/master/Lecture-4-Matplotlib.ipynb
     """
     
-    assert np.max(idxs) <= len(dict_data)
+    assert np.max(t_idxs) <= len(dict_data)
     
     if create_movie:
         assert image_format=="png", "Image format must be png if you want to create the movie."
     
+    base_file_name = base_file_name + "-nfp_idx={}".format(nfp_idx)
+
     if not shape:
-        nf = dict_set_at_idx(dict_data, idxs[0]).shape[-1]
+        nf = dict_set_at_idx(dict_data, t_idxs[0]).shape[-1]
         shape = (np.ceil(np.sqrt(nf)),)*2
         
-    assert shape[0]*shape[1] >= dict_set_at_idx(dict_data, idxs[0]).shape[-1]    
+    assert shape[0]*shape[1] >= dict_set_at_idx(dict_data, t_idxs[0]).shape[-1]    
     ### Plotting the images ###
-    for j, idx in enumerate(idxs):
+    for j, idx in enumerate(t_idxs):
         the_dict = dict_set_at_idx(dict_data, idx)
         fig = pyl.figure(figsize=shape)
-        plot_dict(the_dict)
+        plot_dict(the_dict, nfp_idx=nfp_idx)
         pyl.savefig("{0}/{1}-{2}.{3}".format(outputdir, base_file_name, j+1, image_format))
         pyl.close(fig)
     
@@ -140,4 +144,4 @@ def plot_dict_evolution(dict_data, idxs=[], shape=None, outputdir="./", base_fil
         call(["ffmpeg", "-r", "2",\
         "-i", "{folder}/{fn}-%d.png".format(fn=base_file_name, folder=outputdir),\
         "-c:v", "libx264", "-r", "30",  "-pix_fmt", "yuv420p", "-s", "480x480",\
-        "{folder}/movie.mp4".format(folder=outputdir)])
+        "{folder}/movie-nfp_idx={nfp}.mp4".format(folder=outputdir, nfp=nfp_idx)])

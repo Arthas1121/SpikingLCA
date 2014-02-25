@@ -107,59 +107,70 @@ def dict_set_at_idx(data, idx):
     return data[idx][0][1][0][0]
 
 
-def sparse_to_full(sparse_data, shape):
+def sparse_to_full(sparse_data, header, idx=-1):
     """
-    Takes the 2D array sparse_data, where the first column are the indices of the nonzero 
-    matrix values and the 2nd column are the values. The indices are increasing in the 
-    PetaVision order (nf, nx, ny - in the order of fastest changing to the slowets changing).
+    Takes the sparse data and header which are read from the sparsly written
+    full activity .pvp file and returns the full blown activity matrix in 
+    the form (nx, ny, nf) for the time index idx (defalut is the activity at
+    the last recorded time). 
     
-    It returns the 3D array in the PV standard of (nf, ny, nx), where the dim. values are specified
-    by the argument shape = (nf, nx, ny).  Careful with the order!
+    The indexes in the sparse_data are increasing in the PetaVision order 
+    (nf, nx, ny - in the order of fastest changing to the slowets changing).
+    
+    It returns the 3D array in the form (nx, ny, nf), where the dimension 
+    values are specified in the header.
     """
     
-    assert len(shape) == 3, "Shape should have the form (nf, nx, ny)"
-    
-    dim = shape[0]*shape[1]*shape[2]
-    assert int(np.max(sparse_data.T[0])) < dim
-    
+    shape = (header["nx"], header["ny"], header["nf"])
+    data = sparse_data[idx][0][1]
+
     ### replace the non-existing values with zeroes
-    vector = np.zeros(dim)
-    for i in xrange(len(sparse_data)):
-        vector[int(sparse_data[i][0])] = sparse_data[i][1]
+    vector = np.zeros(shape[0]*shape[1]*shape[2])
+    for i in xrange(len(data)):
+        vector[int(data[i][0])] = data[i][1]
 
-    ### return the reshaped 3D vector which dimensions are (nf, nx, ny)
-    return np.rollaxis(vector.reshape(shape[2], shape[1], shape[0]), 2)
+    ### return the reshaped 3D vector which dimensions are (nx, ny, nf)
+    return np.rollaxis(vector.reshape(shape[1], shape[0], shape[2]), 1)
 
 
-def reconstruct_image(activities, dictionary, nxscale=1., nyscale=1.):
+def reconstruct_image(activities, dictionary, nx_rel_scale=1., ny_rel_scale=1.):
     """
-    NOTE: Currently broken!!!
-    NOTE: Currently only supports reconstruction of one postsynaptic feature!
-    
-    Given the activities and a dictionary (in the PV standard format - (nf, ny, nx)) it reconstructs the
-    original image.
+    Given the activities of the presynaptic layer and a dictionary it 
+    reconstructs the postsynaptic activity in the form (x, y, nfp).
+
+    i.e. if the presynaptic layer is V1 and the dictionary are the weigths
+    V1->LGN it reconstructs the image projected to LGN -> thus the function
+    name.
     """
     
-    assert len(activities) == len(dictionary)
+    assert len(activities[0,0,:]) == len(dictionary[0,0,0,:])
     
-    nf, nxp, nyp = dictionary.shape
-    nf, nx, ny = activities.shape
+    nxp, nyp, nfp, nf = dictionary.shape
+    nx, ny, nf = activities.shape
     
-    # calculate the extended postsynaptic surface based on the presynaptic scales, dimensions and postsynaptic patch size.
-    base_x = int(nxp + 1.*(nx-1)/nxscale)
-    base_y = int(nyp + 1.*(ny-1)/nyscale)
+    # Calculate the extended postsynaptic surface based on the presynaptic 
+    # scales, dimensions and postsynaptic patch size.
+    base_x = int(nxp + 1.*(nx-1)/nx_rel_scale)
+    base_y = int(nyp + 1.*(ny-1)/ny_rel_scale)
     
-    reconstruction = np.zeros((base_x, base_y))
-    ### Loop over all dictionaries and their corresponding nodes.
+    reconstruction = np.zeros((base_x, base_y, nfp))
+    ### Loop over all features and their corresponding nodes.
     for f in xrange(nf):
-        dic = dictionary[f]
-        act = activities[f]
-        for i in xrange(nx):
-            for j in xrange(ny):
-                if act[i,j]:
-                    reconstruction[int(j/nyscale):int(j/nyscale)+nyp,int(i/nxscale):int(i/nxscale)+nxp] += act[i,j]*dic
-    padx = int(nxp/2. - 1./(2*nxscale))
-    pady = int(nyp/2. - 1./(2*nyscale))
+        for fp in xrange(nfp):
+            dic = dictionary[:, :, fp, f]
+            act = activities[:,:,f]
+            for i in xrange(nx):
+                for j in xrange(ny):
+                    if act[i,j]:
+                        xmin = int(i/ny_rel_scale)
+                        xmax = xmin + nxp
+                        ymin = int(j/nx_rel_scale)
+                        ymax = ymin + nyp
+                        reconstruction[xmin:xmax, ymin:ymax, fp] += act[i,j]*dic
+
+    # Crop and return the image
+    padx = int(nxp/2. - 1./(2*nx_rel_scale))
+    pady = int(nyp/2. - 1./(2*ny_rel_scale))
 
     return reconstruction[pady:-pady, padx:-padx]
 
