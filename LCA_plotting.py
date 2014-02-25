@@ -78,18 +78,29 @@ def visualize_vector_comparison(vec, vec_comp=[], normalize=True, position="hori
 ######### PetaVision related plotting #################
 #######################################################
 
+def plot_dict(dict, nfp_idx=0, nf_idxs=[], cmap=cm.Greys, interpolation="nearest"):
+    """
+    Plots the dictionary for a specific patch feature.
 
-def plot_dict_set(d, x, y, cmap=cm.Greys, interpolation="nearest"):
+    dict:    4D dict array in the standardized form (nxp, nyp, nfp, nf).
+    nfp_idx: The index of the patch features to be plotted.
+    nf_idxs: The list of indexes of the features to be plotted. If empty
+             plot all the features (default).
     """
-    Plots the set of dictionary elements. d is the set of dictionary elements 
-    in PetaVision coordinate system (x - columns, y - rows).
-    """
-    assert x*y > len(d)
-    for i in xrange(len(d)):
-        pyl.subplot(x,y,i+1)
-        pyl.imshow(d[i].T, cmap=cmap, interpolation=interpolation)
+
+    nxp, nyp, nfp, nf = dict.shape
+
+    if not nf_idxs:
+        nf_idxs = range(nf)
+
+    fs = np.ceil(np.sqrt(len(nf_idxs)))
+
+    for j in xrange(len(nf_idxs)):
+        pyl.subplot(fs, fs, j+1)
+        pyl.imshow(dict[:,:,nfp_idx,j].T, cmap=cmap, interpolation=interpolation)
         pyl.axis('off')
-        
+
+
 def plot_dict_evolution(dict_data, idxs=[], shape=None, outputdir="./", base_file_name="images", image_format="png", create_movie=True):
     """
     Creates and saves the visualizations of the dictionaries. Optionally creates a movie as well.
@@ -110,16 +121,15 @@ def plot_dict_evolution(dict_data, idxs=[], shape=None, outputdir="./", base_fil
         assert image_format=="png", "Image format must be png if you want to create the movie."
     
     if not shape:
-        nr_of_dicts = len(dict_set_at_idx(dict_data, idxs[0]))
-        shape = (np.ceil(np.sqrt(nr_of_dicts)),)*2
+        nf = dict_set_at_idx(dict_data, idxs[0]).shape[-1]
+        shape = (np.ceil(np.sqrt(nf)),)*2
         
-    assert shape[0]*shape[1] >= len(dict_set_at_idx(dict_data, idxs[0]))
-    
+    assert shape[0]*shape[1] >= dict_set_at_idx(dict_data, idxs[0]).shape[-1]    
     ### Plotting the images ###
     for j, idx in enumerate(idxs):
         the_dict = dict_set_at_idx(dict_data, idx)
-        fig = pyl.figure(figsize=(shape[0]*10/6,)*2)
-        plot_dict_set(the_dict, shape[0], shape[1])
+        fig = pyl.figure(figsize=shape)
+        plot_dict(the_dict)
         pyl.savefig("{0}/{1}-{2}.{3}".format(outputdir, base_file_name, j+1, image_format))
         pyl.close(fig)
     

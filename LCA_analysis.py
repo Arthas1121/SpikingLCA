@@ -98,15 +98,13 @@ def reconstruction_evaluation(a_LCA, GM, pars):
 
 def dict_set_at_idx(data, idx):
     """
-    NOTE: Currently only supports reconstruction of one postsynaptic feature!
-    data: The dictionaries as loaded from the .pvp file into python.
-    idx: The time index to be extracted.
+    data: The dictionaries as loaded from the .pvp file into python from the
+          <kernel-name>.pvp .
+    idx: The timestamp index to be extracted.
     
-    Returns the np.array of dictionaries in the shape (nf, nxp, nyp).
+    Returns the np.array of dictionaries in the shape (nxp, nyp, nfp, nf).
     """
-    shape = data[idx][0][1][0][0].shape
-    final_dict_set = np.rollaxis(data[idx][0][1][0][0].reshape(shape[0],shape[1],shape[3]),2)
-    return final_dict_set
+    return data[idx][0][1][0][0]
 
 
 def sparse_to_full(sparse_data, shape):
@@ -135,6 +133,7 @@ def sparse_to_full(sparse_data, shape):
 
 def reconstruct_image(activities, dictionary, nxscale=1., nyscale=1.):
     """
+    NOTE: Currently broken!!!
     NOTE: Currently only supports reconstruction of one postsynaptic feature!
     
     Given the activities and a dictionary (in the PV standard format - (nf, ny, nx)) it reconstructs the
@@ -163,3 +162,13 @@ def reconstruct_image(activities, dictionary, nxscale=1., nyscale=1.):
     pady = int(nyp/2. - 1./(2*nyscale))
 
     return reconstruction[pady:-pady, padx:-padx]
+
+def dict_from_flat_data(flat_data, header):
+    """
+    Takes the flat_data and header which are results of readpvpfile on the dict
+    files in the checkpoints (the ones ending with _W). For some reason the
+    oct2py flattens the dictionary, so we have to reshape it.
+    """
+
+    desired_shape = (header["nxp"], header["nxp"], header["nfp"], header["nf"])
+    return np.array(flat_data[0]["values"]).reshape(desired_shape)
