@@ -183,3 +183,45 @@ def dict_from_flat_data(flat_data, header):
 
     desired_shape = (header["nxp"], header["nxp"], header["nfp"], header["nf"])
     return np.array(flat_data[0]["values"]).reshape(desired_shape)
+
+
+def list_position_to_3D(idx, shape):
+    """
+    Returns the 3D index for a location based on the list position from PVP file.
+    idx: integer
+    shape: (nx, ny, nf)
+    
+    Returns the position in 3D array corresponding to the idx.
+
+    NOTE: The function does not check for validity of the inputs.
+    """
+    ny = idx/(shape[0]*shape[2])
+    nx = (idx%(shape[0]*shape[2]))/shape[2]
+    nf = (idx%(shape[0]*shape[2]))%shape[2]
+    
+    return (nx, ny, nf)
+
+
+def spike_population_from_pvp(data, header, dt):
+    """
+    Takes the sparse data from the spiking layer and returns SpikePopulation object.
+    
+    data:   Data read out from the .pvp activity file of a spiking object. The format 
+            must be sparse and if you do not write for every step you are probably missing
+            spikes.
+    header: The header of that same .pvp file.
+    dt:     
+    """
+    from neurovivo.common.spike_population import SpikePopulation
+    from neurovivo.common.spike_train import SpikeTrain
+
+    nx, ny, nf = int(header["nx"]), int(header["ny"]), int(header["nf"])
+    shape = (nx, ny, nf)
+    
+    spike_times = [[] for _ in xrange(np.product(shape))]
+    for t_idx in xrange(len(data)):
+        # if not all silent at this time fill in the spike_times
+        if np.any(data[t_idx][0][1]):
+            [spike_times[int(n_idx)].append(t_idx*dt) for n_idx in data[t_idx][0][1].T[0]]
+    
+    return SpikePopulation([SpikeTrain(st) for st in spike_times])
