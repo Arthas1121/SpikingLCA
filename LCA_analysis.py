@@ -217,11 +217,13 @@ def spike_population_from_pvp(data, header, dt):
 
     nx, ny, nf = int(header["nx"]), int(header["ny"]), int(header["nf"])
     shape = (nx, ny, nf)
-    
+    total_time = int(header['nbands']*dt)
+
     spike_times = [[] for _ in xrange(np.product(shape))]
     for t_idx in xrange(len(data)):
         # if not all silent at this time fill in the spike_times
         if np.any(data[t_idx][0][1]):
             [spike_times[int(n_idx)].append(t_idx*dt) for n_idx in data[t_idx][0][1].T[0]]
-    
-    return SpikePopulation([SpikeTrain(st) for st in spike_times])
+
+    return SpikePopulation([SpikeTrain(st, total_time=total_time) for st in spike_times])
+
