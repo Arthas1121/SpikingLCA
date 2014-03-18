@@ -78,7 +78,8 @@ def visualize_vector_comparison(vec, vec_comp=[], normalize=True, position="hori
 ######### PetaVision related plotting #################
 #######################################################
 
-def plot_dict(dict, nfp_idx=0, nf_idxs=[], cmap=cm.Greys, interpolation="nearest"):
+def plot_dict(dict, nfp_idx=0, nf_idxs=[], cmap=cm.Greys,\
+              interpolation="nearest"):
     """
     Plots the dictionary for a specific patch feature.
 
@@ -101,7 +102,9 @@ def plot_dict(dict, nfp_idx=0, nf_idxs=[], cmap=cm.Greys, interpolation="nearest
         pyl.axis('off')
 
 
-def plot_dict_evolution(dict_data, nfp_idx=0, t_idxs=[], shape=None, outputdir="./", base_file_name="images", image_format="png", create_movie=True):
+def plot_dict_evolution(dict_data, nfp_idx=0, t_idxs=[], shape=None,\
+                        outputdir="./", base_file_name="images",\
+                        image_format="png", create_movie=True):
     """
     Creates and saves the visualizations of the dictionaries. 
     Optionally creates a movie as well.
@@ -112,6 +115,11 @@ def plot_dict_evolution(dict_data, nfp_idx=0, t_idxs=[], shape=None, outputdir="
                If empty plot them all.
     shape:     The shape of the image - a tuple of 2 elements.
     
+    NOTE: If running in Ipython notebook, running this function might take a
+    lot of memory - the reason for this is not really clear to me at the
+    moment, but I suspect that ipython notebook is somehow ignoring the
+    pyl.close(fig).
+
     NOTE: more on the movie creation: https://trac.ffmpeg.org/wiki/x264EncodingGuide
     NOTE: more on displaying the movie in iPython Notebook: 
     http://nbviewer.ipython.org/github/jrjohansson/scientific-python-lectures/blob/master/Lecture-4-Matplotlib.ipynb
