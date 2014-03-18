@@ -166,3 +166,28 @@ def plottable_rgb_matrix(vec, dim):
     vec_t = vec.reshape((3, res_len)).T
     vec_t = vec_t.reshape((1, len(vec)))[0]
     return vec_t.reshape((dim[0], dim[1] ,3))
+
+def create_params_file(template_path, params, output_path):
+    """
+    Creates the and saves the PV params file.
+    
+    Args:
+        template_path: The path to the file containing template string for the params file.
+        params: A dictionary containing the substitute parameters.
+        output_path: The path where the params file should be saved.
+    Returns:
+        The path to the saved params file. 
+
+    NOTE: The template file should be a text file, where the variables in the curly 
+          brackets will be replaced by the value in the corresponding params dict. 
+          element using the python str.format convetion. To have a { or } in the resulting
+          parameters file, you should put {{ or }} in the template. 
+    """
+    
+    with open (template_path, "r") as template_file:
+        template_data = template_file.read()
+            
+    with open(output_path, "w") as params_file:
+        params_file.write(template_data.format(**params))
+
+    return output_path
