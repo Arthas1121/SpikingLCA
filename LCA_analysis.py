@@ -92,6 +92,30 @@ def reconstruction_evaluation(a_LCA, GM, pars):
             }
     return result
 
+
+def mutual_information(im1, im2):
+    """
+    Based on the Matlab code MI_GG.m found online:
+    http://www.mathworks.com/matlabcentral/fileexchange/36538-very-fast-mutual-information-betweentwo-images/content/MI_GG.m
+    """    
+    im1_norm = im1 - np.min(im1)
+    im2_norm = im2 - np.min(im2)
+        
+    top_border = np.max([np.max(im1_norm),np.max(im2_norm)])
+    
+    h = np.histogram2d(im1_norm, im2_norm, [top_border+1, top_border+1], [[0,top_border+1],[0,top_border+1]])[0]
+    hn = h/np.sum(h)
+    
+    y_marg = np.sum(hn,0)
+    x_marg = np.sum(hn,1)
+    
+    Hy = -np.sum(y_marg*np.log2(y_marg + (y_marg==0)))
+    Hx = -np.sum(x_marg*np.log2(x_marg + (x_marg==0)))
+    arg_xy2 = hn*np.log2(hn+(hn==0))
+    h_xy = np.sum(-arg_xy2)
+    
+    return Hy + Hx - h_xy
+
 ##########################################
 ##### PetaVision related analysis ########
 ##########################################
