@@ -16,6 +16,7 @@ default_CIFAR10Spiking_v4_parameters = {
                       "stop_time": 4000.0,
                       "display_period": 500.0,
                       "spike-count_dt": 500.0,
+                      "retina_foreground": 1000,
                       "image_list_path": "\"/home/mpelko/ws/CIFAR10Spiking/input/image_filelist.txt\"",
                       "V12res_weights_file_pos": "\"/home/mpelko/ws/CIFAR10Spiking/input/weights/V1_to_residual_W.pvp_pos\"",
                       "V12res_weights_file_neg": "\"/home/mpelko/ws/CIFAR10Spiking/input/weights/V1_to_residual_W.pvp_neg\"",
@@ -75,20 +76,23 @@ def run_CIFAR10Spiking(params, version=1):
     Runs the CIFAR10Spiking simulation with the given parameters in params.
     Returns the path to the output of the simulation.
     """    
-
+    
     template_path = "/home/mpelko/ws/CIFAR10Spiking/input/CIFAR10Spiking_template_v{}.params".format(version)
 
    
     import random
 
-    tmp_params_name = "{}.params".format(random.randint(0,1000))
+    tmp_params_name = "{:x}.params".format(random.randrange(16**30))
     tmp_params_path = create_params_file(template_path, params, "/home/mpelko/tmp/{}".format(tmp_params_name))
-    tmp_file_name = "run_{}.log".format(random.randint(0,1000))
+    tmp_file_name = "run_{:x}.log".format(random.randrange(16**30))
     tmp_file_path = cmn.HOME+"/tmp/" + tmp_file_name
     
     with open(tmp_file_path, "w") as logfile:
-        call(["/home/mpelko/ws/CIFAR10Spiking/Debug/CIFAR10Spiking", "-p",\
+        res = call(["/home/mpelko/ws/CIFAR10Spiking/Debug/CIFAR10Spiking", "-p",\
         tmp_params_path], stdout=logfile, stderr=STDOUT)
+    
+    if not res == 0:
+        print "The simulation ran failed. I don't know how to get the error message, so you have to run in manually."
    
     try:
         os.remove(params["output_path"][1:-1] + "/run.log")
