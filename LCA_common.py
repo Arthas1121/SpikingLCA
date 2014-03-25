@@ -6,6 +6,51 @@ import os
 HOME = os.environ["HOME"]
 
 # -----------------------------------------------------------------------------
+def rm_rf(path):
+# -----------------------------------------------------------------------------
+    '''
+    tries to remove the path (does rm -rf - like command) and does not complain
+    if the path does not exist or any other exception occurs. Unsafe deleting!
+    '''
+    import shutil
+    try:
+        shutil.rmtree(path)
+    except:
+        pass
+
+# -----------------------------------------------------------------------------
+class Bunch(object):
+# -----------------------------------------------------------------------------
+    '''
+    A helper class. Making a dictionary adict into an object. Once the object
+    is created, each dictonary element can be accessed by object.element .
+    '''
+    def __init__(self, adict):
+        self.__dict__.update(adict)
+
+# -----------------------------------------------------------------------------
+def mkdir_p(path):
+# -----------------------------------------------------------------------------
+    '''
+    Creates a folder or not if there is a folder already. sth like mkdir -p
+    '''
+    if not ('@' in path and ":" in path):
+        try:
+            os.makedirs(path)
+        except OSError, e:
+            if e.errno != 17:
+                raise
+    else:
+        user_name=path.split("@")[0]
+        file_name=path.split(":")[1]
+        server_name=path.split("@")[1].split(":")[0]
+        try:
+            os.system("ssh {0}@{1} mkdir -p {2}".format(user_name, server_name, file_name))
+        except OSError, e:
+            if e.errno != 17:
+                raise
+
+# -----------------------------------------------------------------------------
 def load_pickle(PATH):
 # -----------------------------------------------------------------------------
     """ Loads the pickled data. """
@@ -121,3 +166,28 @@ def plottable_rgb_matrix(vec, dim):
     vec_t = vec.reshape((3, res_len)).T
     vec_t = vec_t.reshape((1, len(vec)))[0]
     return vec_t.reshape((dim[0], dim[1] ,3))
+
+def create_params_file(template_path, params, output_path):
+    """
+    Creates the and saves the PV params file.
+    
+    Args:
+        template_path: The path to the file containing template string for the params file.
+        params: A dictionary containing the substitute parameters.
+        output_path: The path where the params file should be saved.
+    Returns:
+        The path to the saved params file. 
+
+    NOTE: The template file should be a text file, where the variables in the curly 
+          brackets will be replaced by the value in the corresponding params dict. 
+          element using the python str.format convetion. To have a { or } in the resulting
+          parameters file, you should put {{ or }} in the template. 
+    """
+    
+    with open (template_path, "r") as template_file:
+        template_data = template_file.read()
+            
+    with open(output_path, "w") as params_file:
+        params_file.write(template_data.format(**params))
+
+    return output_path

@@ -1,8 +1,8 @@
 import numpy as np
-import neurovivo.plotting.plotting as plt
 import matplotlib.pyplot as pyl
 import matplotlib.cm as cm
 import LCA.LCA_common as cmn
+from LCA.LCA_analysis import dict_set_at_idx
 
 def plot_edge(SMs, i):
     figure()
@@ -73,3 +73,83 @@ def visualize_vector_comparison(vec, vec_comp=[], normalize=True, position="hori
             pyl.imshow([vec_comp for i in xrange(len(vec))], interpolation="nearest", cmap = cm.Greys_r, vmin=vmin, vmax=vmax)
         else:
             pyl.imshow([vec_comp for i in xrange(len(vec))], interpolation="nearest", cmap = cm.Greys_r)
+
+#######################################################
+######### PetaVision related plotting #################
+#######################################################
+
+def plot_dict(dict, nfp_idx=0, nf_idxs=[], cmap=cm.Greys,\
+              interpolation="nearest"):
+    """
+    Plots the dictionary for a specific patch feature.
+
+    dict:    4D dict array in the standardized form (nxp, nyp, nfp, nf).
+    nfp_idx: The index of the patch features to be plotted.
+    nf_idxs: The list of indexes of the features to be plotted. If empty
+             plot all the features (default).
+    """
+
+    nxp, nyp, nfp, nf = dict.shape
+
+    if not nf_idxs:
+        nf_idxs = range(nf)
+
+    fs = np.ceil(np.sqrt(len(nf_idxs)))
+
+    for j in xrange(len(nf_idxs)):
+        pyl.subplot(fs, fs, j+1)
+        pyl.imshow(dict[:,:,nfp_idx,j].T, cmap=cmap, interpolation=interpolation)
+        pyl.axis('off')
+
+
+def plot_dict_evolution(dict_data, nfp_idx=0, t_idxs=[], shape=None,\
+                        outputdir="./", base_file_name="images",\
+                        image_format="png", create_movie=True):
+    """
+    Creates and saves the visualizations of the dictionaries. 
+    Optionally creates a movie as well.
+    
+    dict_data: The dictionaries as loaded from the .pvp file into python.
+    nfp_idx:   The index of the postsynaptic feature to be plotted.
+    t_dxs:     A list of time indexes of those dictionaries to be plotted. 
+               If empty plot them all.
+    shape:     The shape of the image - a tuple of 2 elements.
+    
+    NOTE: If running in Ipython notebook, running this function might take a
+    lot of memory - the reason for this is not really clear to me at the
+    moment, but I suspect that ipython notebook is somehow ignoring the
+    pyl.close(fig).
+
+    NOTE: more on the movie creation: https://trac.ffmpeg.org/wiki/x264EncodingGuide
+    NOTE: more on displaying the movie in iPython Notebook: 
+    http://nbviewer.ipython.org/github/jrjohansson/scientific-python-lectures/blob/master/Lecture-4-Matplotlib.ipynb
+    """
+    
+    assert np.max(t_idxs) <= len(dict_data)
+    
+    if create_movie:
+        assert image_format=="png", "Image format must be png if you want to create the movie."
+    
+    base_file_name = base_file_name + "-nfp_idx={}".format(nfp_idx)
+
+    if not shape:
+        nf = dict_set_at_idx(dict_data, t_idxs[0]).shape[-1]
+        shape = (np.ceil(np.sqrt(nf)),)*2
+        
+    assert shape[0]*shape[1] >= dict_set_at_idx(dict_data, t_idxs[0]).shape[-1]    
+    ### Plotting the images ###
+    for j, idx in enumerate(t_idxs):
+        the_dict = dict_set_at_idx(dict_data, idx)
+        fig = pyl.figure(figsize=shape)
+        plot_dict(the_dict, nfp_idx=nfp_idx)
+        pyl.savefig("{0}/{1}-{2}.{3}".format(outputdir, base_file_name, j+1, image_format))
+        pyl.close(fig)
+    
+    ### Movie from images ###
+    if create_movie:
+        from subprocess import call
+        
+        call(["ffmpeg", "-r", "2",\
+        "-i", "{folder}/{fn}-%d.png".format(fn=base_file_name, folder=outputdir),\
+        "-c:v", "libx264", "-r", "30",  "-pix_fmt", "yuv420p", "-s", "480x480",\
+        "{folder}/movie-nfp_idx={nfp}.mp4".format(folder=outputdir, nfp=nfp_idx)])
